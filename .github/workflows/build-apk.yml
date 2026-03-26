@@ -21,8 +21,10 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
+      - name: Install expect and Bubblewrap
+        run: |
+          sudo apt-get install -y expect
+          npm install -g @bubblewrap/cli
 
       - name: Create TWA config
         run: |
@@ -61,10 +63,21 @@ jobs:
           }
           EOF
 
-      - name: Build TWA
+      - name: Build TWA with expect
         run: |
           cd twa-project
-          printf "Y\nY\n" | bubblewrap build --skipPwaValidation
+          expect << 'EXPECT'
+          set timeout 300
+          spawn bubblewrap build --skipPwaValidation
+          expect "Do you want Bubblewrap to install the JDK"
+          send "Y\r"
+          expect "Do you want Bubblewrap to install the Android SDK"
+          send "Y\r"
+          expect eof
+          EXPECT
+
+      - name: List build output
+        run: find twa-project -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
