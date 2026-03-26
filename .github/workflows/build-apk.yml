@@ -1,0 +1,61 @@
+name: Build TWA APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Initialize TWA project
+        run: |
+          mkdir twa-project && cd twa-project
+          bubblewrap init --manifest https://map-calculator-six.vercel.app/manifest.json \
+            --directory . \
+            --packageId com.mapcalculator.app \
+            --name "Map Distance Calculator" \
+            --shortName "MapCalc" \
+            --themeColor "#2563eb" \
+            --backgroundColor "#f9fafb" \
+            --startUrl "/" \
+            --iconUrl "https://map-calculator-six.vercel.app/icon-512.png" \
+            --maskableIconUrl "https://map-calculator-six.vercel.app/icon-512.png"
+
+      - name: Build APK
+        run: |
+          cd twa-project
+          bubblewrap build
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: MapCalc-APK
+          path: twa-project/app-release-signed.apk
+          if-no-files-found: warn
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v3
+        with:
+          name: MapCalc-AAB
+          path: twa-project/app-release-bundle.aab
+          if-no-files-found: warn
