@@ -21,12 +21,6 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
@@ -70,9 +64,7 @@ jobs:
       - name: Build TWA
         run: |
           cd twa-project
-          echo "n" | bubblewrap build --skipPwaValidation
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+          printf "Y\n" | bubblewrap build --skipPwaValidation
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
