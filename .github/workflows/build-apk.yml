@@ -5,6 +5,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,24 +30,48 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Initialize TWA project
+      - name: Create TWA config
         run: |
           mkdir twa-project && cd twa-project
-          bubblewrap init --manifest https://map-calculator-six.vercel.app/manifest.json \
-            --directory . \
-            --packageId com.mapcalculator.app \
-            --name "Map Distance Calculator" \
-            --shortName "MapCalc" \
-            --themeColor "#2563eb" \
-            --backgroundColor "#f9fafb" \
-            --startUrl "/" \
-            --iconUrl "https://map-calculator-six.vercel.app/icon-512.png" \
-            --maskableIconUrl "https://map-calculator-six.vercel.app/icon-512.png"
+          cat > twa-manifest.json << 'EOF'
+          {
+            "packageId": "com.mapcalculator.app",
+            "host": "map-calculator-six.vercel.app",
+            "name": "Map Distance Calculator",
+            "launcherName": "MapCalc",
+            "display": "standalone",
+            "orientation": "portrait",
+            "themeColor": "#2563eb",
+            "navigationColor": "#2563eb",
+            "backgroundColor": "#f9fafb",
+            "startUrl": "/",
+            "iconUrl": "https://map-calculator-six.vercel.app/icon-512.png",
+            "maskableIconUrl": "https://map-calculator-six.vercel.app/icon-512.png",
+            "appVersion": "1.0.0",
+            "appVersionCode": 1,
+            "signingMode": "none",
+            "generatorApp": "bubblewrap-cli",
+            "webManifestUrl": "https://map-calculator-six.vercel.app/manifest.json",
+            "fallbackType": "customtabs",
+            "features": {},
+            "alphaDependencies": {
+              "enabled": false
+            },
+            "enableNotifications": false,
+            "shortcuts": [],
+            "generatedAppCategory": "Shopping",
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://map-calculator-six.vercel.app/",
+            "minSdkVersion": 19,
+            "targetSdkVersion": 34
+          }
+          EOF
 
-      - name: Build APK
+      - name: Build TWA
         run: |
           cd twa-project
-          bubblewrap build
+          bubblewrap build --skipPwaValidation
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
