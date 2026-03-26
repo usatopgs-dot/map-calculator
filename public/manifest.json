@@ -3,6 +3,7 @@
   "short_name": "MapCalc",
   "description": "Free online map distance calculator with GPS, travel time, area measurement and route sharing.",
   "start_url": "/",
+  "id": "map-distance-calculator",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#2563eb",
