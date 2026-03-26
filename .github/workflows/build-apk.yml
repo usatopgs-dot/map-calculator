@@ -59,7 +59,6 @@ jobs:
             },
             "enableNotifications": false,
             "shortcuts": [],
-            "generatedAppCategory": "Shopping",
             "isChromeOSOnly": false,
             "isMetaQuest": false,
             "fullScopeUrl": "https://map-calculator-six.vercel.app/",
@@ -71,7 +70,9 @@ jobs:
       - name: Build TWA
         run: |
           cd twa-project
-          bubblewrap build --skipPwaValidation
+          echo "n" | bubblewrap build --skipPwaValidation
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
