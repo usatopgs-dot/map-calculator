@@ -5,9 +5,6 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,12 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -33,67 +25,52 @@ jobs:
       - name: Accept Android Licenses
         run: yes | sdkmanager --licenses || true
 
+      - name: Install Android Build Tools
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Create TWA project
+      - name: Initialize TWA project
         run: |
-          mkdir twa-project && cd twa-project
-          cat > twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.mapcalculator.app",
-            "host": "map-calculator-six.vercel.app",
-            "name": "Map Distance Calculator",
-            "launcherName": "MapCalc",
-            "display": "standalone",
-            "orientation": "portrait",
-            "themeColor": "#2563eb",
-            "navigationColor": "#2563eb",
-            "backgroundColor": "#f9fafb",
-            "startUrl": "/",
-            "iconUrl": "https://map-calculator-six.vercel.app/icon-512.png",
-            "maskableIconUrl": "https://map-calculator-six.vercel.app/icon-512.png",
-            "appVersion": "1.0.0",
-            "appVersionCode": 1,
-            "signingMode": "none",
-            "generatorApp": "bubblewrap-cli",
-            "webManifestUrl": "https://map-calculator-six.vercel.app/manifest.json",
-            "fallbackType": "customtabs",
-            "features": {},
-            "alphaDependencies": {
-              "enabled": false
-            },
-            "enableNotifications": false,
-            "shortcuts": [],
-            "isChromeOSOnly": false,
-            "isMetaQuest": false,
-            "fullScopeUrl": "https://map-calculator-six.vercel.app/",
-            "minSdkVersion": 19,
-            "targetSdkVersion": 34
-          }
-          EOF
+          mkdir -p twa-project && cd twa-project
+          bubblewrap init \
+            --manifest "https://map-calculator-six.vercel.app/manifest.json" \
+            --directory . \
+            --skipPwaValidation 2>&1 || true
 
-      - name: Build TWA
+      - name: Build APK with Gradle
         run: |
           cd twa-project
-          bubblewrap build --skipPwaValidation --yes 2>&1 || \
-          (echo "y" | bubblewrap build --skipPwaValidation) 2>&1 || true
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assembleRelease --no-daemon 2>&1
+          else
+            echo "gradlew not found"
+            printf 'n\nn\n' | bubblewrap build --skipPwaValidation 2>&1 || true
+          fi
 
-      - name: List all build files
+      - name: Find all output files
         run: |
-          echo "=== Searching for APK/AAB files ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK found"
-          find . -name "*.aab" 2>/dev/null || echo "No AAB found"
-          find twa-project -type f 2>/dev/null | head -50
+          echo "=== APK files ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK"
+          echo "=== AAB files ==="
+          find . -name "*.aab" 2>/dev/null || echo "No AAB"
+          echo "=== twa-project files ==="
+          find twa-project -type f 2>/dev/null | head -30
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MapCalc-APK
           path: |
-            twa-project/app-release-signed.apk
-            twa-project/app-debug.apk
             twa-project/**/*.apk
+            twa-project/app/build/outputs/apk/**/*.apk
           if-no-files-found: warn
 
       - name: Upload AAB
@@ -101,6 +78,6 @@ jobs:
         with:
           name: MapCalc-AAB
           path: |
-            twa-project/app-release-bundle.aab
             twa-project/**/*.aab
+            twa-project/app/build/outputs/bundle/**/*.aab
           if-no-files-found: warn
