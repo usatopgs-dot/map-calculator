@@ -36,48 +36,42 @@ jobs:
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Configure bubblewrap to use system JDK and SDK
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+          echo "Bubblewrap config:"
+          cat ~/.bubblewrap/config.json
+
       - name: Initialize TWA project
         run: |
           mkdir -p twa-project && cd twa-project
           bubblewrap init \
             --manifest "https://map-calculator-six.vercel.app/manifest.json" \
             --directory . \
-            --skipPwaValidation 2>&1 || true
+            --skipPwaValidation 2>&1
+          echo "=== Files after init ==="
+          ls -la
 
-      - name: Build APK with Gradle
+      - name: Build APK
         run: |
           cd twa-project
-          if [ -f "gradlew" ]; then
-            chmod +x gradlew
-            ./gradlew assembleRelease --no-daemon 2>&1
-          else
-            echo "gradlew not found"
-            printf 'n\nn\n' | bubblewrap build --skipPwaValidation 2>&1 || true
-          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon 2>&1
 
-      - name: Find all output files
+      - name: Find output files
         run: |
           echo "=== APK files ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK"
-          echo "=== AAB files ==="
-          find . -name "*.aab" 2>/dev/null || echo "No AAB"
-          echo "=== twa-project files ==="
-          find twa-project -type f 2>/dev/null | head -30
+          find . -name "*.apk" 2>/dev/null || echo "No APK found"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MapCalc-APK
-          path: |
-            twa-project/**/*.apk
-            twa-project/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: MapCalc-AAB
-          path: |
-            twa-project/**/*.aab
-            twa-project/app/build/outputs/bundle/**/*.aab
+          path: twa-project/app/build/outputs/apk/**/*.apk
           if-no-files-found: warn
