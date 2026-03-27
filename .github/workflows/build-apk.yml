@@ -37,6 +37,13 @@ jobs:
         run: |
           mkdir -p twa-app/app/src/main/res/values
 
+          # gradle.properties - AndroidX fix
+          cat > twa-app/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
           # settings.gradle
           cat > twa-app/settings.gradle << 'EOF'
           pluginManagement {
