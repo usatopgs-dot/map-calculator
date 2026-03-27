@@ -27,12 +27,15 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
+      - name: Install Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
+          unzip -q gradle-8.0-bin.zip
+          echo "$PWD/gradle-8.0/bin" >> $GITHUB_PATH
+
       - name: Create TWA Android project
         run: |
-          mkdir -p twa-app/app/src/main/java/com/mapcalculator/app
           mkdir -p twa-app/app/src/main/res/values
-          mkdir -p twa-app/app/src/main/res/xml
-          mkdir -p twa-app/gradle/wrapper
 
           # settings.gradle
           cat > twa-app/settings.gradle << 'EOF'
@@ -54,7 +57,7 @@ jobs:
           include ':app'
           EOF
 
-          # build.gradle (root)
+          # root build.gradle
           cat > twa-app/build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.1.0' apply false
@@ -71,14 +74,14 @@ jobs:
               compileSdk 34
               defaultConfig {
                   applicationId "com.mapcalculator.app"
-                  minSdk 19
+                  minSdk 21
                   targetSdk 34
                   versionCode 1
                   versionName "1.0"
               }
               buildTypes {
-                  release {
-                      minifyEnabled false
+                  debug {
+                      debuggable true
                   }
               }
               compileOptions {
@@ -91,19 +94,6 @@ jobs:
           }
           EOF
 
-          # gradle wrapper
-          cat > twa-app/gradle/wrapper/gradle-wrapper.properties << 'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.0-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
-
-          # gradlew
-          curl -s https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradlew -o twa-app/gradlew
-          chmod +x twa-app/gradlew
-
           # AndroidManifest.xml
           cat > twa-app/app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -111,15 +101,14 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <application
                   android:label="Map Distance Calculator"
-                  android:allowBackup="true"
-                  android:supportsRtl="true">
+                  android:allowBackup="true">
                   <activity
                       android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                       android:exported="true">
                       <meta-data
                           android:name="android.support.customtabs.trusted.DEFAULT_URL"
                           android:value="https://map-calculator-six.vercel.app" />
-                      <intent-filter android:autoVerify="true">
+                      <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
@@ -142,13 +131,12 @@ jobs:
           </resources>
           EOF
 
-          echo "Project created!"
-          ls -la twa-app/
+          echo "✅ Project created!"
 
       - name: Build Debug APK
         run: |
           cd twa-app
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1
+          gradle assembleDebug --no-daemon --stacktrace 2>&1
 
       - name: Find APK
         run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
